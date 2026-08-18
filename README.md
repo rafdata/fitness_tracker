@@ -1,1 +1,378 @@
 # fitness_tracker
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Lean Tracker">
+  <title>Lean Physique Tracker</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --accent: #38bdf8;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: #334155;
+      --warn: #f59e0b;
+      --success: #10b981;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: env(safe-area-inset-top, 20px) 16px env(safe-area-inset-bottom, 20px) 16px;
+    }
+    header { margin-bottom: 16px; }
+    h1 { font-size: 1.25rem; margin: 0 0 4px 0; font-weight: 700; color: #fff; }
+    .subtitle { font-size: 0.85rem; color: var(--text-muted); }
+    
+    .safety-banner {
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid var(--warn);
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin-bottom: 16px;
+      font-size: 0.8rem;
+    }
+    .safety-banner strong { color: var(--warn); display: block; margin-bottom: 4px; }
+    .safety-banner ul { margin: 0; padding-left: 18px; color: #cbd5e1; }
+
+    .day-selector {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .day-btn {
+      flex: 1;
+      padding: 10px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .day-btn.active {
+      background: var(--accent);
+      color: #0f172a;
+      border-color: var(--accent);
+    }
+
+    .exercise-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+    .exercise-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .pattern-tag { font-size: 0.75rem; color: var(--accent); text-transform: uppercase; font-weight: 700; }
+    .exercise-name { font-size: 1rem; font-weight: 600; }
+    .target-reps { font-size: 0.8rem; color: var(--text-muted); }
+
+    .set-row {
+      display: grid;
+      grid-template-columns: 32px 1fr 1fr auto;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .set-num { font-size: 0.8rem; color: var(--text-muted); font-weight: 600; }
+    input[type="number"], input[type="text"] {
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 8px;
+      color: #fff;
+      font-size: 0.9rem;
+      text-align: center;
+    }
+    .save-btn {
+      background: var(--border);
+      color: #fff;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .save-btn.logged { background: var(--success); color: #fff; }
+
+    .timer-bar {
+      position: sticky;
+      bottom: env(safe-area-inset-bottom, 12px);
+      background: rgba(30, 41, 59, 0.95);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 20px;
+    }
+    .timer-display { font-size: 1.1rem; font-family: monospace; font-weight: 700; }
+    .timer-controls button {
+      background: #334155;
+      color: #fff;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      margin-left: 4px;
+      cursor: pointer;
+    }
+
+    .data-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 24px;
+      margin-bottom: 80px;
+    }
+    .util-btn {
+      flex: 1;
+      padding: 8px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      border-radius: 6px;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Dan Go 8-Pattern Lean Routine</h1>
+    <div class="subtitle">3x Weekly • Controlled Load Architecture</div>
+  </header>
+
+  <div class="safety-banner">
+    <strong>Health Protocol (Stable Aneurysm Safety)</strong>
+    <ul>
+      <li>Target 12–15 reps to reduce systemic & vascular load.</li>
+      <li>Stop 2–3 reps shy of failure (RPE 7–8).</li>
+      <li>Do NOT hold breath — maintain steady breathing throughout sets.</li>
+      <li>Rest full 90–120 seconds between working sets.</li>
+    </ul>
+  </div>
+
+  <div class="day-selector">
+    <button class="day-btn active" onclick="switchDay(0)">Day 1</button>
+    <button class="day-btn" onclick="switchDay(1)">Day 2</button>
+    <button class="day-btn" onclick="switchDay(2)">Day 3</button>
+  </div>
+
+  <div id="exercise-list"></div>
+
+  <div class="timer-bar">
+    <div>
+      <span style="font-size:0.75rem; color:var(--text-muted); display:block;">REST TIMER</span>
+      <span class="timer-display" id="timer-display">00:00</span>
+    </div>
+    <div class="timer-controls">
+      <button onclick="startTimer(90)">+90s</button>
+      <button onclick="startTimer(120)">+120s</button>
+      <button onclick="stopTimer()" style="color:#ef4444;">Reset</button>
+    </div>
+  </div>
+
+  <div class="data-actions">
+    <button class="util-btn" onclick="exportData()">Export Log (JSON)</button>
+    <button class="util-btn" onclick="document.getElementById('import-file').click()">Import Backup</button>
+    <input type="file" id="import-file" style="display:none;" onchange="importData(event)" accept=".json">
+  </div>
+
+  <script>
+    const routineData = [
+      {
+        day: "Day 1",
+        exercises: [
+          { pattern: "The Squat", exercise: "Hack Squat or Leg Press", sets: 3, reps: "12-15" },
+          { pattern: "The Horizontal Push", exercise: "Incline Chest Press Machine", sets: 3, reps: "12-15" },
+          { pattern: "The Lat Pull", exercise: "Assisted Lat Pulldown Machine", sets: 3, reps: "12-15" },
+          { pattern: "The Hinge", exercise: "Back Extension", sets: 3, reps: "12-15" },
+          { pattern: "Walking", exercise: "Brisk Walk", sets: 1, reps: "20-30 mins", isCardio: true }
+        ]
+      },
+      {
+        day: "Day 2",
+        exercises: [
+          { pattern: "The Lunge", exercise: "Bulgarian Split Squat or Step-up", sets: 3, reps: "12-15" },
+          { pattern: "The Vertical Push", exercise: "Standing Overhead Machine Press", sets: 3, reps: "12-15" },
+          { pattern: "The Back Row", exercise: "Chest-Supported Dumbbell Rows", sets: 3, reps: "12-15" },
+          { pattern: "The Hinge (Alt)", exercise: "Seated Leg Curl Machine", sets: 3, reps: "12-15" },
+          { pattern: "Walking", exercise: "Brisk Walk", sets: 1, reps: "20-30 mins", isCardio: true }
+        ]
+      },
+      {
+        day: "Day 3",
+        exercises: [
+          { pattern: "The Squat (Alt)", exercise: "Goblet Squat", sets: 3, reps: "12-15" },
+          { pattern: "The Horizontal Push (Alt)", exercise: "Dumbbell Bench Press", sets: 3, reps: "12-15" },
+          { pattern: "The Back Row (Alt)", exercise: "Cable Row", sets: 3, reps: "12-15" },
+          { pattern: "The Hinge", exercise: "Back Extension or Trap Bar Deadlift", sets: 3, reps: "12-15" },
+          { pattern: "Walking", exercise: "Brisk Walk", sets: 1, reps: "20-30 mins", isCardio: true }
+        ]
+      }
+    ];
+
+    let currentDayIdx = 0;
+    let workoutLogs = JSON.parse(localStorage.getItem('routine_logs_v1') || '{}');
+    const todayKey = new Date().toISOString().split('T')[0];
+
+    function getSetKey(dayIdx, exIdx, setIdx) {
+      return `${todayKey}_d${dayIdx}_e${exIdx}_s${setIdx}`;
+    }
+
+    function renderDay(dayIdx) {
+      const container = document.getElementById('exercise-list');
+      const day = routineData[dayIdx];
+      
+      container.innerHTML = day.exercises.map((ex, exIdx) => {
+        let setsHtml = '';
+        for (let s = 0; s < ex.sets; s++) {
+          const logKey = getSetKey(dayIdx, exIdx, s);
+          const savedData = workoutLogs[logKey] || { val1: '', val2: '', logged: false };
+          const isCardio = ex.isCardio;
+
+          setsHtml += `
+            <div class="set-row">
+              <span class="set-num">S${s + 1}</span>
+              <input type="number" id="v1_${dayIdx}_${exIdx}_${s}" placeholder="${isCardio ? 'Mins' : 'lbs'}" value="${savedData.val1}">
+              <input type="number" id="v2_${dayIdx}_${exIdx}_${s}" placeholder="${isCardio ? 'RPE' : 'Reps'}" value="${savedData.val2}">
+              <button class="save-btn ${savedData.logged ? 'logged' : ''}" onclick="saveSet(${dayIdx}, ${exIdx}, ${s})">
+                ${savedData.logged ? '✓' : 'Log'}
+              </button>
+            </div>
+          `;
+        }
+
+        return `
+          <div class="exercise-card">
+            <div class="exercise-header">
+              <div>
+                <div class="pattern-tag">${ex.pattern}</div>
+                <div class="exercise-name">${ex.exercise}</div>
+              </div>
+              <div class="target-reps">${ex.reps}</div>
+            </div>
+            ${setsHtml}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function switchDay(idx) {
+      currentDayIdx = idx;
+      document.querySelectorAll('.day-btn').forEach((b, i) => {
+        b.classList.toggle('active', i === idx);
+      });
+      renderDay(idx);
+    }
+
+    function saveSet(d, e, s) {
+      const v1 = document.getElementById(`v1_${d}_${e}_${s}`).value;
+      const v2 = document.getElementById(`v2_${d}_${e}_${s}`).value;
+      const key = getSetKey(d, e, s);
+
+      workoutLogs[key] = { val1: v1, val2: v2, logged: true, time: new Date().toLocaleTimeString() };
+      localStorage.setItem('routine_logs_v1', JSON.stringify(workoutLogs));
+      renderDay(d);
+    }
+
+    // --- Audio & Rest Timer ---
+    let timerInterval = null;
+    let secondsRemaining = 0;
+
+    function playBeep() {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime); // A5 note
+        gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.5);
+        if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+      } catch (e) {
+        console.log("Audio not allowed yet:", e);
+      }
+    }
+
+    function startTimer(seconds) {
+      clearInterval(timerInterval);
+      secondsRemaining = seconds;
+      updateTimerDisplay();
+
+      timerInterval = setInterval(() => {
+        secondsRemaining--;
+        updateTimerDisplay();
+        if (secondsRemaining <= 0) {
+          clearInterval(timerInterval);
+          playBeep();
+        }
+      }, 1000);
+    }
+
+    function stopTimer() {
+      clearInterval(timerInterval);
+      secondsRemaining = 0;
+      updateTimerDisplay();
+    }
+
+    function updateTimerDisplay() {
+      const mins = Math.floor(secondsRemaining / 60);
+      const secs = secondsRemaining % 60;
+      document.getElementById('timer-display').innerText = 
+        `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
+
+    // --- Data Export/Import ---
+    function exportData() {
+      const blob = new Blob([JSON.stringify(workoutLogs, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `dan_go_workout_logs_${todayKey}.json`;
+      a.click();
+    }
+
+    function importData(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          workoutLogs = JSON.parse(e.target.result);
+          localStorage.setItem('routine_logs_v1', JSON.stringify(workoutLogs));
+          renderDay(currentDayIdx);
+          alert('Workout logs successfully restored.');
+        } catch (err) {
+          alert('Invalid JSON file.');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // Initial Render
+    renderDay(0);
+  </script>
+</body>
+</html>
