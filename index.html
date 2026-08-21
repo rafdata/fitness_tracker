@@ -1,24 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  
   <!-- Standard Favicon (Browser Tabs) -->
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 
   <!-- iOS Home Screen Icon (Apple Touch Icon) -->
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
   
-  <!-- Existing Meta Tags -->
+  <!-- iOS Web App Meta Tags -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Meridian">
-
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Meridian">
+  
   <title>Lean Physique Tracker</title>
+  
   <style>
     :root {
       --bg: #0f172a;
@@ -206,6 +204,8 @@
   </div>
 
   <script>
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzJqtSbb-fpwBWXTGMQC8DdMrbY7MSe0kkvc6XWZCHnSAOf_QKIKglH8vEQXAcTASYTRg/exec";
+
     const routineData = [
       {
         day: "Day 1",
@@ -303,10 +303,35 @@
       const v1 = document.getElementById(`v1_${d}_${e}_${s}`).value;
       const v2 = document.getElementById(`v2_${d}_${e}_${s}`).value;
       const key = getSetKey(d, e, s);
+      const exerciseObj = routineData[d].exercises[e];
 
+      // 1. Save locally to device
       workoutLogs[key] = { val1: v1, val2: v2, logged: true, time: new Date().toLocaleTimeString() };
       localStorage.setItem('routine_logs_v1', JSON.stringify(workoutLogs));
       renderDay(d);
+
+      // 2. Auto-sync to Google Sheet in background
+      if (GOOGLE_SCRIPT_URL) {
+        const payload = {
+          date: todayKey,
+          day: routineData[d].day,
+          exercise: exerciseObj.exercise,
+          set: s + 1,
+          val1: v1,
+          val2: v2
+        };
+
+        fetch(GOOGLE_SCRIPT_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        }).then(() => {
+          console.log("Logged to Google Drive Sheet");
+        }).catch(err => {
+          console.error("Backup failed, stored locally only", err);
+        });
+      }
     }
 
     // --- Audio & Rest Timer ---
@@ -319,7 +344,7 @@
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(880, audioCtx.currentTime); // A5 note
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime);
         gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
         osc.connect(gain);
@@ -389,44 +414,6 @@
 
     // Initial Render
     renderDay(0);
-
-    // Paste your Google Web App URL here
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzJqtSbb-fpwBWXTGMQC8DdMrbY7MSe0kkvc6XWZCHnSAOf_QKIKglH8vEQXAcTASYTRg/exec";
-
-function saveSet(d, e, s) {
-  const v1 = document.getElementById(`v1_${d}_${e}_${s}`).value;
-  const v2 = document.getElementById(`v2_${d}_${e}_${s}`).value;
-  const key = getSetKey(d, e, s);
-  const exerciseObj = routineData[d].exercises[e];
-
-  // 1. Save locally
-  workoutLogs[key] = { val1: v1, val2: v2, logged: true, time: new Date().toLocaleTimeString() };
-  localStorage.setItem('routine_logs_v1', JSON.stringify(workoutLogs));
-  renderDay(d);
-
-  // 2. Auto-sync to Google Sheet in background
-  if (GOOGLE_SCRIPT_URL) {
-    const payload = {
-      date: todayKey,
-      day: routineData[d].day,
-      exercise: exerciseObj.exercise,
-      set: s + 1,
-      val1: v1,
-      val2: v2
-    };
-
-    fetch(GOOGLE_SCRIPT_URL, {
-      method: "POST",
-      mode: "no-cors", // Required for Google Apps Script redirects
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    }).then(() => {
-      console.log("Logged to Google Drive Sheet");
-    }).catch(err => {
-      console.error("Backup failed, stored locally only", err);
-    });
-  }
-}
   </script>
 </body>
 </html>
