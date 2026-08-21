@@ -389,6 +389,44 @@
 
     // Initial Render
     renderDay(0);
+
+    // Paste your Google Web App URL here
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzJqtSbb-fpwBWXTGMQC8DdMrbY7MSe0kkvc6XWZCHnSAOf_QKIKglH8vEQXAcTASYTRg/exec";
+
+function saveSet(d, e, s) {
+  const v1 = document.getElementById(`v1_${d}_${e}_${s}`).value;
+  const v2 = document.getElementById(`v2_${d}_${e}_${s}`).value;
+  const key = getSetKey(d, e, s);
+  const exerciseObj = routineData[d].exercises[e];
+
+  // 1. Save locally
+  workoutLogs[key] = { val1: v1, val2: v2, logged: true, time: new Date().toLocaleTimeString() };
+  localStorage.setItem('routine_logs_v1', JSON.stringify(workoutLogs));
+  renderDay(d);
+
+  // 2. Auto-sync to Google Sheet in background
+  if (GOOGLE_SCRIPT_URL) {
+    const payload = {
+      date: todayKey,
+      day: routineData[d].day,
+      exercise: exerciseObj.exercise,
+      set: s + 1,
+      val1: v1,
+      val2: v2
+    };
+
+    fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors", // Required for Google Apps Script redirects
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    }).then(() => {
+      console.log("Logged to Google Drive Sheet");
+    }).catch(err => {
+      console.error("Backup failed, stored locally only", err);
+    });
+  }
+}
   </script>
 </body>
 </html>
