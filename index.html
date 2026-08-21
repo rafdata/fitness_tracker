@@ -27,6 +27,7 @@
       --border: #334155;
       --warn: #f59e0b;
       --success: #10b981;
+      --danger: #ef4444;
     }
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     body {
@@ -90,7 +91,7 @@
 
     .set-row {
       display: grid;
-      grid-template-columns: 32px 1fr 1fr auto;
+      grid-template-columns: 28px 1fr 1fr auto;
       gap: 8px;
       align-items: center;
       margin-bottom: 8px;
@@ -106,6 +107,10 @@
       font-size: 0.9rem;
       text-align: center;
     }
+    .btn-group {
+      display: flex;
+      gap: 4px;
+    }
     .save-btn {
       background: var(--border);
       color: #fff;
@@ -116,6 +121,19 @@
       cursor: pointer;
     }
     .save-btn.logged { background: var(--success); color: #fff; }
+    .clear-set-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 8px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+    .clear-set-btn:hover {
+      border-color: var(--danger);
+      color: var(--danger);
+    }
 
     .timer-bar {
       position: sticky;
@@ -144,19 +162,25 @@
 
     .data-actions {
       display: flex;
-      gap: 10px;
+      flex-wrap: wrap;
+      gap: 8px;
       margin-top: 24px;
       margin-bottom: 80px;
     }
     .util-btn {
-      flex: 1;
+      flex: 1 1 30%;
       padding: 8px;
       background: transparent;
       border: 1px solid var(--border);
       color: var(--text-muted);
       border-radius: 6px;
-      font-size: 0.8rem;
+      font-size: 0.75rem;
       cursor: pointer;
+      text-align: center;
+    }
+    .util-btn.danger {
+      color: var(--danger);
+      border-color: rgba(239, 68, 68, 0.3);
     }
   </style>
 </head>
@@ -200,6 +224,7 @@
   <div class="data-actions">
     <button class="util-btn" onclick="exportData()">Export Log (JSON)</button>
     <button class="util-btn" onclick="document.getElementById('import-file').click()">Import Backup</button>
+    <button class="util-btn danger" onclick="clearToday()">Reset Today</button>
     <input type="file" id="import-file" style="display:none;" onchange="importData(event)" accept=".json">
   </div>
 
@@ -263,15 +288,21 @@
           const logKey = getSetKey(dayIdx, exIdx, s);
           const savedData = workoutLogs[logKey] || { val1: '', val2: '', logged: false };
           const isCardio = ex.isCardio;
+          const hasData = savedData.logged || savedData.val1 || savedData.val2;
 
           setsHtml += `
             <div class="set-row">
               <span class="set-num">S${s + 1}</span>
               <input type="number" id="v1_${dayIdx}_${exIdx}_${s}" placeholder="${isCardio ? 'Mins' : 'lbs'}" value="${savedData.val1}">
               <input type="number" id="v2_${dayIdx}_${exIdx}_${s}" placeholder="${isCardio ? 'RPE' : 'Reps'}" value="${savedData.val2}">
-              <button class="save-btn ${savedData.logged ? 'logged' : ''}" onclick="saveSet(${dayIdx}, ${exIdx}, ${s})">
-                ${savedData.logged ? '✓' : 'Log'}
-              </button>
+              <div class="btn-group">
+                <button class="save-btn ${savedData.logged ? 'logged' : ''}" onclick="saveSet(${dayIdx}, ${exIdx}, ${s})">
+                  ${savedData.logged ? '✓' : 'Log'}
+                </button>
+                ${hasData ? `
+                  <button class="clear-set-btn" title="Clear Set" onclick="clearSet(${dayIdx}, ${exIdx}, ${s})">✕</button>
+                ` : ''}
+              </div>
             </div>
           `;
         }
@@ -305,7 +336,7 @@
       const key = getSetKey(d, e, s);
       const exerciseObj = routineData[d].exercises[e];
 
-      // 1. Save locally to device
+      // 1. Save locally
       workoutLogs[key] = { val1: v1, val2: v2, logged: true, time: new Date().toLocaleTimeString() };
       localStorage.setItem('routine_logs_v1', JSON.stringify(workoutLogs));
       renderDay(d);
@@ -334,6 +365,48 @@
       }
     }
 
+    function clearSet(d, e, s) {
+      const key = getSetKey(d, e, s);
+      const exerciseObj = routineData[d].exercises[e];
+      
+      // 1. Delete from local storage state
+      delete workoutLogs[key];
+      localStorage.setItem('routine_logs_v1', JSON.stringify(workoutLogs));
+      renderDay(d);
+
+      // 2. Log deletion row to Google Sheet
+      if (GOOGLE_SCRIPT_URL) {
+        const payload = {
+          date: todayKey,
+          day: routineData[d].day,
+          exercise: exerciseObj.exercise,
+          set: s + 1,
+          val1: "CLEARED / DELETED",
+          val2: ""
+        };
+
+        fetch(GOOGLE_SCRIPT_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        }).catch(err => console.error("Could not sync deletion", err));
+      }
+    }
+
+    function clearToday() {
+      if (!confirm("Are you sure you want to reset all logged sets for today?")) return;
+
+      Object.keys(workoutLogs).forEach(key => {
+        if (key.startsWith(todayKey)) {
+          delete workoutLogs[key];
+        }
+      });
+
+      localStorage.setItem('routine_logs_v1', JSON.stringify(workoutLogs));
+      renderDay(currentDayIdx);
+    }
+
     // --- Audio & Rest Timer ---
     let timerInterval = null;
     let secondsRemaining = 0;
@@ -353,7 +426,7 @@
         osc.stop(audioCtx.currentTime + 0.5);
         if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
       } catch (e) {
-        console.log("Audio not allowed yet:", e);
+        console.log("Audio context initialized upon interaction.");
       }
     }
 
